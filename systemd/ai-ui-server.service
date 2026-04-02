@@ -1,0 +1,23 @@
+# ~/.config/systemd/user/ai-ui-server.service
+# Install: systemctl --user enable --now ai-ui-server
+
+[Unit]
+Description=AI OS UI Server
+After=ai-dbus-proxy.service graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/opt/ai-os/venv/bin/python -m ui.ui_server
+WorkingDirectory=/opt/ai-os
+
+Restart=on-failure
+RestartSec=3s
+
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/ai-os
+
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=graphical-session.target

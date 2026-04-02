@@ -1,0 +1,89 @@
+# /etc/apparmor.d/ai-agent
+#
+# AppArmor profile for the AI OS agent process (UID 1001).
+# Allows: app control via AT-SPI, terminal commands in bwrap,
+#         reading home directory, writing to AI-specific paths.
+# Denies: raw input devices, auth dialogs, system paths.
+
+#include <tunables/global>
+
+profile ai-agent /opt/ai-os/venv/bin/python flags=(enforce) {
+
+  #include <abstractions/base>
+  #include <abstractions/python>
+  #include <abstractions/nameservice>
+
+  # ── Networking ─────────────────────────────────────────────────────────
+  # Agent can use network (controlled by systemd netns and egress policy)
+  network inet stream,
+  network inet6 stream,
+  network unix stream,
+
+  # ── Unix socket access (OS-internal IPC only) ──────────────────────────
+  /run/ai-os/input-tagger.sock    rw,
+  /run/ai-os/dbus-proxy.sock      rw,
+  /run/ai-os/confirm-ui.sock      rw,
+  /run/ai-os/input-broker.sock    rw,
+  /run/ai-os/                     r,
+
+  # ── AT-SPI accessibility bus ───────────────────────────────────────────
+  # Allowed: connect to accessibility bus
+  /run/user/1000/at-spi/bus       r,
+  dbus (send, receive) bus=session
+    interface=org.a11y.atspi.*,
+
+  # ── DBus (via proxy only — no direct session bus access) ───────────────
+  # The proxy socket is allowed above; direct session bus is DENIED
+  deny dbus bus=session
+    peer=(name=org.freedesktop.secrets),
+  deny dbus bus=session
+    peer=(name=org.gnome.keyring.*),
+  deny dbus bus=session
+    interface=org.freedesktop.NetworkManager.*,
+  deny dbus bus=session
+    interface=com.canonical.Unity.PasswordDialog,
+
+  # ── Filesystem ─────────────────────────────────────────────────────────
+  # Read user home (for context, not for exfil)
+  /home/user/{**}                 r,
+
+  # Agent's own working directory — read/write
+  /home/ai-agent/{**}             rw,
+
+  # Logs
+  /var/log/ai-os/{**}             rw,
+
+  # Python / venv
+  /opt/ai-os/{**}                 r,
+  /opt/ai-os/venv/bin/python      ix,
+
+  # System binaries needed for bwrap sandboxing
+  /usr/bin/bwrap                  ix,
+  /usr/bin/bash                   ix,
+  /usr/bin/sh                     ix,
+
+  # ── HARD DENIES ────────────────────────────────────────────────────────
+
+  # No raw input devices (use broker instead)
+  deny /dev/uinput                 rw,
+  deny /dev/input/**               rw,
+
+  # No access to sensitive system paths
+  deny /etc/shadow                 r,
+  deny /etc/sudoers                r,
+  deny /etc/sudoers.d/**           r,
+  deny /root/**                    rw,
+  deny /boot/**                    rw,
+  deny /proc/sysrq-trigger         w,
+
+  # No kernel module loading
+  deny /proc/sys/kernel/**         w,
+  deny /sys/**                     w,
+
+  # ── Capabilities ───────────────────────────────────────────────────────
+  deny capability sys_admin,
+  deny capability sys_ptrace,
+  deny capability net_admin,
+  deny capability sys_rawio,
+
+}

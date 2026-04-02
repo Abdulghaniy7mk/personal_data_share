@@ -1,0 +1,79 @@
+# /etc/systemd/system/ai-agent.service
+#
+# Runs the AI agent as UID 1001, inside ai-agent.slice.
+# Fully isolated from the user's cgroup (user-1000.slice).
+# auditd tags every syscall with this cgroup path.
+
+[Unit]
+Description=AI OS Agent
+Documentation=file:///opt/ai-os/docs/
+After=network-online.target ai-input-tagger.service ai-dbus-proxy.service
+Requires=ai-input-tagger.service
+
+[Service]
+Type=simple
+User=ai-agent
+Group=ai-agent
+Slice=ai-agent.slice
+
+# ── Execution ─────────────────────────────────────────────────────────────
+ExecStart=/opt/ai-os/venv/bin/python /opt/ai-os/agent_main.py
+Restart=on-failure
+RestartSec=3s
+
+# ── Environment ──────────────────────────────────────────────────────────
+Environment=PYTHONUNBUFFERED=1
+Environment=AI_OS_MODE=full
+EnvironmentFile=-/etc/ai-os/agent.env
+
+# ── Resource limits ───────────────────────────────────────────────────────
+# Prevent the AI agent from consuming the whole system
+MemoryMax=2G
+MemoryHigh=1500M
+CPUQuota=60%
+TasksMax=64
+
+# ── Security hardening ────────────────────────────────────────────────────
+
+# No new privileges — AI agent cannot gain elevated permissions
+NoNewPrivileges=yes
+
+# Restrict system calls to a safe subset
+# (generated via: systemd-analyze syscall-filter)
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @raw-io @reboot @swap
+SystemCallErrorNumber=EPERM
+
+# Filesystem restrictions
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ai-agent /run/ai-os /var/log/ai-os
+
+# No access to hardware devices (except via broker)
+PrivateDevices=yes
+DevicePolicy=closed
+
+# Separate network namespace — controlled egress only
+PrivateNetwork=no
+# (network access granted selectively via ip netns in agent_main.py)
+
+# IPC isolation
+PrivateIPC=yes
+
+# No root filesystem modifications
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+# Capability bounding set — drop everything not needed
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# AppArmor profile (see apparmor/ai-agent)
+AppArmorProfile=/etc/apparmor.d/ai-agent
+
+# Audit identity — all syscalls tagged with this audit login UID
+AuditIdentity=ai-agent
+
+[Install]
+WantedBy=multi-user.target

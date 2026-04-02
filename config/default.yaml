@@ -1,0 +1,37 @@
+# config/default.yaml — AI OS Default Configuration
+
+agent_socket: /run/ai-os/agent.sock
+
+planner:
+  model_path: /opt/ai-os/models/mistral-7b-instruct-v0.3.Q4_K_M.gguf
+  ctx_len:    4096
+  threads:    4
+  gpu_layers: 0        # set >0 if you have a GPU
+
+supervisor:
+  rate_limit_actions:        10
+  rate_limit_window_sec:     30
+  loop_exact_threshold:       3
+  near_loop_threshold:        5
+  near_loop_window_sec:      60
+  session_budget:           200
+  consecutive_fail_threshold: 5
+
+memory:
+  db_path: /home/ai-agent/memory.db
+
+snapshots:
+  enabled:        true
+  snapper_config: root
+
+voice:
+  stt_model:      large-v3-turbo
+  stt_device:     cpu
+  stt_compute:    int8
+  language:       en
+  tts_voice:      af
+  piper_model:    en_US-amy-medium.onnx
+
+logging:
+  level: INFO
+  file:  /var/log/ai-os/agent.log

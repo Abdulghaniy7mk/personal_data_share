@@ -1,0 +1,35 @@
+# AI OS — Python dependencies
+# Install: pip install -r requirements.txt
+
+# Core
+pyyaml>=6.0
+aiofiles>=23.0
+
+# LLM inference (local)
+llama-cpp-python>=0.2.56     # local model inference (Mistral, Phi-3, Qwen)
+
+# Input / evdev
+evdev>=1.6                   # physical input device monitoring
+
+# Accessibility / app control
+# pyatspi: install via apt on Debian: apt install python3-pyatspi
+# or: pip install pyatspi (Linux only)
+
+# Voice
+faster-whisper>=1.0          # STT (Whisper large-v3-turbo)
+sounddevice>=0.4             # audio playback
+
+# Optional: Kokoro TTS (higher quality than Piper)
+# kokoro>=0.7  (install separately if desired)
+
+# UI server
+websockets>=12.0
+
+# D-Bus bridge (system package preferred on Debian/Ubuntu)
+# apt install python3-dbus  OR  pip install dbus-python (needs libdbus-1-dev)
+
+# Storage
+# sqlite3 is in Python stdlib — no install needed
+
+# Monitoring
+psutil>=5.9                  # system resource monitoring for supervisor

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI OS</title>
+<style>
+  :root {
+    --bg:       #0f0f0f;
+    --surface:  #1a1a1a;
+    --border:   #2a2a2a;
+    --text:     #e8e8e6;
+    --muted:    #888;
+    --accent:   #5b8dee;
+    --danger:   #e05a5a;
+    --success:  #4caf7d;
+    --warn:     #e09a3a;
+    --radius:   10px;
+    --font:     'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--font); font-size: 14px;
+    height: 100vh; display: flex; flex-direction: column;
+  }
+
+  /* ── Header ── */
+  #header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  #status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
+  }
+  #status-dot.connected  { background: var(--success); }
+  #status-dot.thinking   { background: var(--warn);
+    animation: pulse 1s ease-in-out infinite; }
+  #status-dot.error      { background: var(--danger); }
+  #status-label { font-size: 12px; color: var(--muted); flex: 1; }
+  #mode-badge {
+    font-size: 11px; padding: 2px 8px;
+    border-radius: 20px; border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Messages ── */
+  #messages {
+    flex: 1; overflow-y: auto; padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .msg {
+    max-width: 88%; padding: 8px 12px;
+    border-radius: var(--radius); line-height: 1.5;
+    font-size: 13px;
+  }
+  .msg.user   { align-self: flex-end; background: var(--accent);
+    color: #fff; border-bottom-right-radius: 3px; }
+  .msg.agent  { align-self: flex-start; background: var(--surface);
+    border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+  .msg.system { align-self: center; background: transparent;
+    color: var(--muted); font-size: 11px; border: none; }
+  .msg.confirm {
+    align-self: stretch; background: var(--surface);
+    border: 1px solid var(--warn); border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .confirm-title { font-weight: 500; color: var(--warn); margin-bottom: 6px; }
+  .confirm-detail { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .confirm-btns { display: flex; gap: 8px; }
+  .btn {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer;
+    font-size: 13px; transition: background .15s;
+  }
+  .btn:hover   { background: var(--border); }
+  .btn.danger  { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: rgba(224,90,90,.1); }
+  .btn.primary { border-color: var(--accent); color: var(--accent); }
+  .btn.primary:hover { background: rgba(91,141,238,.1); }
+
+  /* ── Input bar ── */
+  #inputbar {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  #input {
+    flex: 1; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 8px 12px; font-size: 13px; font-family: var(--font);
+    resize: none; min-height: 36px; max-height: 120px;
+    outline: none; line-height: 1.5;
+  }
+  #input:focus { border-color: var(--accent); }
+  #send-btn, #mic-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); cursor: pointer; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background .15s, border-color .15s;
+  }
+  #send-btn:hover { background: var(--accent); border-color: var(--accent); }
+  #mic-btn:hover  { background: var(--border); }
+  #mic-btn.recording { background: rgba(224,90,90,.2); border-color: var(--danger); }
+
+  /* ── Scrollbar ── */
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-track { background: transparent; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="status-dot"></div>
+  <span id="status-label">Connecting…</span>
+  <span id="mode-badge">AI OS</span>
+</div>
+
+<div id="messages"></div>
+
+<div id="inputbar">
+  <textarea id="input" placeholder="Ask AI or give a command…" rows="1"></textarea>
+  <button id="mic-btn" title="Voice input">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="23"/>
+      <line x1="8" y1="23" x2="16" y2="23"/>
+    </svg>
+  </button>
+  <button id="send-btn" title="Send">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="22" y1="2" x2="11" y2="13"/>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+const WS_URL = "ws://127.0.0.1:8765";
+
+let ws = null;
+let reconnectDelay = 1000;
+let mediaRecorder = null;
+let audioChunks = [];
+
+const $messages     = document.getElementById("messages");
+const $input        = document.getElementById("input");
+const $statusDot    = document.getElementById("status-dot");
+const $statusLabel  = document.getElementById("status-label");
+const $sendBtn      = document.getElementById("send-btn");
+const $micBtn       = document.getElementById("mic-btn");
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    reconnectDelay = 1000;
+    setStatus("connected", "Connected");
+    ws.send(JSON.stringify({ type: "ping" }));
+  };
+
+  ws.onclose = () => {
+    setStatus("error", `Reconnecting in ${reconnectDelay/1000}s…`);
+    setTimeout(() => { reconnectDelay = Math.min(reconnectDelay * 1.5, 15000); connect(); }, reconnectDelay);
+  };
+
+  ws.onerror = () => setStatus("error", "Connection error");
+
+  ws.onmessage = (evt) => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+    handleMessage(msg);
+  };
+}
+
+function handleMessage(msg) {
+  if (msg.type === "pong") {
+    setStatus("connected", msg.agent_running ? "Agent running" : "Agent offline");
+    return;
+  }
+  if (msg.type === "status" && msg.status === "thinking") {
+    setStatus("thinking", "Thinking…");
+    return;
+  }
+  if (msg.type === "response") {
+    setStatus("connected", "Agent running");
+    addMessage("agent", msg.response);
+    return;
+  }
+  if (msg.type === "notify") {
+    addMessage("system", "ℹ " + msg.message);
+    return;
+  }
+  if (msg.type === "confirm_request") {
+    showConfirmation(msg);
+    return;
+  }
+  if (msg.type === "real_world_confirm") {
+    showRealWorldConfirmation(msg);
+    return;
+  }
+  if (msg.type === "error") {
+    setStatus("error", "Error");
+    addMessage("system", "Error: " + msg.message);
+    return;
+  }
+}
+
+// ── Messaging ──────────────────────────────────────────────────────────────
+
+function send() {
+  const text = $input.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+  addMessage("user", text);
+  ws.send(JSON.stringify({ type: "text", text }));
+  $input.value = "";
+  $input.style.height = "auto";
+}
+
+function addMessage(role, text) {
+  const el = document.createElement("div");
+  el.className = "msg " + role;
+  el.textContent = text;
+  $messages.appendChild(el);
+  $messages.scrollTop = $messages.scrollHeight;
+}
+
+// ── Confirmations ──────────────────────────────────────────────────────────
+
+function showConfirmation(msg) {
+  const el = document.createElement("div");
+  el.className = "msg confirm";
+  el.innerHTML = `
+    <div class="confirm-title">Confirmation required — ${escHtml(msg.action || "")}</div>
+    <div class="confirm-detail">${escHtml(msg.description || "")}<br>Risk: ${escHtml(msg.risk || "")}</div>
+    <div class="confirm-btns">
+      <button class="btn primary" onclick="sendConfirm(this, true)">Approve</button>
+      <button class="btn danger"  onclick="sendConfirm(this, false)">Cancel</button>
+    </div>`;
+  $messages.appendChild(el);
+  $messages.scrollTop = $messages.scrollHeight;
+}
+
+function showRealWorldConfirmation(msg) {
+  let fieldsHtml = "";
+  if (msg.fields) {
+    fieldsHtml = Object.entries(msg.fields)
+      .map(([k, v]) => `<div><b>${escHtml(k)}:</b> ${escHtml(String(v))}</div>`)
+      .join("");
+  }
+  const el = document.createElement("div");
+  el.className = "msg confirm";
+  el.innerHTML = `
+    <div class="confirm-title">Real-world action — review carefully</div>
+    <div class="confirm-detail">
+      ${escHtml(msg.summary || "")}<br><br>
+      ${fieldsHtml}<br>
+      <b>${escHtml(msg.consequence || "")}</b>
+    </div>
+    <div class="confirm-btns">
+      <button class="btn primary" onclick="sendConfirm(this, true)">CONFIRM</button>
+      <button class="btn danger"  onclick="sendConfirm(this, false)">Cancel</button>
+    </div>`;
+  $messages.appendChild(el);
+  $messages.scrollTop = $messages.scrollHeight;
+}
+
+function sendConfirm(btn, approved) {
+  const container = btn.closest(".msg.confirm");
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "confirm_response", approved }));
+  }
+  container.querySelector(".confirm-btns").innerHTML =
+    approved ? '<span style="color:var(--success)">Approved</span>'
+             : '<span style="color:var(--danger)">Cancelled</span>';
+}
+
+// ── Voice ──────────────────────────────────────────────────────────────────
+
+$micBtn.addEventListener("click", async () => {
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      $micBtn.classList.remove("recording");
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const ab   = await blob.arrayBuffer();
+      const b64  = btoa(String.fromCharCode(...new Uint8Array(ab)));
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "voice_audio", data: b64 }));
+        addMessage("system", "Voice sent…");
+      }
+      stream.getTracks().forEach(t => t.stop());
+    };
+    mediaRecorder.start();
+    $micBtn.classList.add("recording");
+  } catch (e) {
+    addMessage("system", "Microphone not available: " + e.message);
+  }
+});
+
+// ── Input auto-resize ──────────────────────────────────────────────────────
+
+$input.addEventListener("input", () => {
+  $input.style.height = "auto";
+  $input.style.height = Math.min($input.scrollHeight, 120) + "px";
+});
+
+$input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+});
+
+$sendBtn.addEventListener("click", send);
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function setStatus(state, label) {
+  $statusDot.className = state;
+  $statusLabel.textContent = label;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Start ──────────────────────────────────────────────────────────────────
+
+connect();
+</script>
+</body>
+</html>

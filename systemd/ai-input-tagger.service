@@ -1,0 +1,15 @@
+[Unit]
+Description=AI OS Input Tagger (evdev, root)
+After=local-fs.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /opt/ai-os/security/input_tagger.py
+Restart=always
+RestartSec=3
+RuntimeDirectory=ai-agent
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=multi-user.target

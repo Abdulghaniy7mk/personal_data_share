@@ -1,0 +1,51 @@
+# config/low_ram.yaml — AI OS Low-RAM Configuration
+# Targets 3–4GB total system RAM (e.g. Vivo Y11, budget Android devices via Termux+proot)
+# Or any Linux system with ≤6GB RAM.
+
+agent_socket: /run/ai-os/agent.sock
+
+planner:
+  # Phi-3-mini-4k-instruct Q4_K_M ≈ 2.2GB RAM — fits in 3GB with OS overhead
+  # Download: https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf
+  model_path: /opt/ai-os/models/Phi-3-mini-4k-instruct-q4.gguf
+  ctx_len:    2048      # reduced from 4096
+  threads:    2         # fewer threads on low-core devices
+  gpu_layers: 0
+
+supervisor:
+  rate_limit_actions:        6     # tighter on low-RAM (fewer parallel actions)
+  rate_limit_window_sec:     30
+  loop_exact_threshold:       3
+  near_loop_threshold:        4
+  near_loop_window_sec:      60
+  session_budget:           100    # lower budget — saves memory on action log
+  consecutive_fail_threshold: 3
+
+memory:
+  db_path: /home/ai-agent/memory.db
+
+snapshots:
+  enabled:        true
+  snapper_config: root
+
+voice:
+  # Whisper tiny or base — much smaller, less accurate but fits in RAM
+  # tiny ≈ 75MB, base ≈ 145MB, small ≈ 461MB
+  stt_model:      base
+  stt_device:     cpu
+  stt_compute:    int8
+  language:       en
+  # Piper is lighter than Kokoro — better for low-RAM
+  tts_voice:      null   # use piper only
+  piper_model:    en_US-amy-medium.onnx
+
+low_ram_flags:
+  disable_vlm_fallback: true      # VLM screen capture disabled (saves 4GB+)
+  disable_simulation:   true      # pre-execution simulator disabled
+  disable_dual_validator: true    # secondary validator disabled (Phi-3 only)
+  memory_max_entries:   50        # cap memory DB size
+  bwrap_preload:        false     # don't preload bwrap namespaces
+
+logging:
+  level: WARNING          # reduce log I/O on slow storage
+  file:  /var/log/ai-os/agent.log

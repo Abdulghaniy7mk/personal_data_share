@@ -1,0 +1,29 @@
+# ~/.config/systemd/user/ai-dbus-proxy.service
+# Install: systemctl --user enable --now ai-dbus-proxy
+
+[Unit]
+Description=AI OS DBus Proxy
+Documentation=file:///opt/ai-os/docs/
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/opt/ai-os/venv/bin/python -m execution.dbus_proxy
+WorkingDirectory=/opt/ai-os
+
+Restart=on-failure
+RestartSec=3s
+
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/ai-os
+
+# Runs as UID 1000 automatically (user service)
+# No PrivilegeEscalation needed — it's the user's own session bus
+
+# Mild hardening (user service, so less strict than system service)
+NoNewPrivileges=yes
+ProtectHostname=yes
+
+[Install]
+WantedBy=graphical-session.target

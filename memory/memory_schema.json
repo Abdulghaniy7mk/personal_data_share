@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI OS Memory Schema",
+  "definitions": {
+    "cognitive_entry": {
+      "type": "object",
+      "required": ["id", "key", "value", "sig", "ts"],
+      "properties": {
+        "id":    { "type": "string", "format": "uuid" },
+        "key":   { "type": "string", "maxLength": 128 },
+        "value": {},
+        "sig":   { "type": "string", "minLength": 64, "maxLength": 64 },
+        "ts":    { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "operational_entry": {
+      "type": "object",
+      "required": ["id", "event_type", "payload", "sig", "ts"],
+      "properties": {
+        "id":          { "type": "string", "format": "uuid" },
+        "action_id":   { "type": "string" },
+        "event_type":  {
+          "type": "string",
+          "enum": [
+            "user_input", "plan_produced", "gate_decision",
+            "execution_result", "execution_error",
+            "snapshot_taken", "rollback",
+            "supervisor_halt", "channel_guard_blocked",
+            "secondary_validator_veto"
+          ]
+        },
+        "payload":     { "type": "object" },
+        "sig":         { "type": "string" },
+        "ts":          { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
