@@ -1,0 +1,71 @@
+# config/active.yaml — Aegis OS Active Config
+# Change planner.backend to switch AI provider instantly.
+# Restart ai-agent after changing: sudo systemctl restart ai-agent
+
+agent_socket: /run/ai-os/agent.sock
+
+# ══════════════════════════════════════════════════
+# PLANNER — pick ONE backend
+# ══════════════════════════════════════════════════
+planner:
+
+  # ── Option 1: Claude (Anthropic) ──────────────
+  # Fast, smart, cheap with haiku model
+  # Key: ANTHROPIC_API_KEY in /etc/ai-os/agent.env
+  backend: anthropic
+  model:   claude-haiku-4-5-20251001   # fastest + cheapest
+  # model: claude-sonnet-4-6           # smarter, costs more
+
+  # ── Option 2: OpenAI / ChatGPT ────────────────
+  # backend: openai
+  # model:   gpt-4o-mini               # cheap + fast
+  # model:   gpt-4o                    # smartest
+
+  # ── Option 3: Google Gemini ───────────────────
+  # backend: gemini
+  # model:   gemini-2.0-flash          # fast + free tier available
+
+  # ── Option 4: Groq (free tier, very fast) ─────
+  # backend: groq
+  # model:   llama-3.3-70b-versatile   # free tier, fast
+
+  # ── Option 5: OpenRouter (100+ models) ────────
+  # backend: openrouter
+  # model:   mistralai/mistral-7b-instruct
+  # model:   google/gemma-3-27b-it:free
+
+  # ── Option 6: Ollama (local, no API key) ──────
+  # backend: ollama
+  # model:   phi3:mini                 # smallest, needs 2GB RAM
+  # model:   mistral                   # better, needs 6GB RAM
+  # ollama_host: http://localhost:11434
+
+  max_tokens:  1024
+  temperature: 0.1
+
+# ══════════════════════════════════════════════════
+supervisor:
+  rate_limit_actions:        6
+  rate_limit_window_sec:     30
+  loop_exact_threshold:       3
+  near_loop_threshold:        4
+  session_budget:           100
+  consecutive_fail_threshold: 3
+
+memory:
+  db_path: /home/ai-agent/memory.db
+
+snapshots:
+  enabled: false      # ext4 filesystem — no Btrfs snapshots
+  snapper_config: root
+
+voice:
+  stt_model:  base    # tiny=75MB  base=145MB  small=461MB
+  stt_device: cpu
+  stt_compute: int8
+  language:   en
+  piper_model: en_US-amy-medium.onnx
+
+logging:
+  level: INFO
+  file:  /var/log/ai-os/agent.log
