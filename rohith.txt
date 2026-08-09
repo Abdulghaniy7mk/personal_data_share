@@ -1,0 +1,76 @@
+@echo off
+:: ============================================================
+:: FULL RESTORE - undoes block_content.bat and block_vpn.bat
+:: No password needed - must be run as Administrator on the
+:: affected PC.
+:: ============================================================
+
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo This script must be run as Administrator.
+    echo Right-click the file and choose "Run as administrator".
+    pause
+    exit /b 1
+)
+
+set HOSTS=%WINDIR%\System32\drivers\etc\hosts
+set BACKUP=%WINDIR%\System32\drivers\etc\hosts.backup
+set LOCKDIR=%ProgramData%\ContentBlock
+set HASHFILE=%LOCKDIR%\unlock.hash
+
+echo ============================================================
+echo  Restoring hosts file...
+echo ============================================================
+
+if exist "%BACKUP%" (
+    copy /Y "%BACKUP%" "%HOSTS%" >nul
+    echo Hosts file restored from backup.
+) else (
+    echo No backup found - stripping block markers manually instead.
+    powershell -NoProfile -Command ^
+      "$c = Get-Content '%HOSTS%'; $out = @(); $skip = $false; foreach ($line in $c) { if ($line -match '# === CONTENT_BLOCK_START ===') { $skip = $true; continue }; if ($line -match '# === CONTENT_BLOCK_END ===') { $skip = $false; continue }; if (-not $skip) { $out += $line } }; Set-Content -Path '%HOSTS%' -Value $out"
+)
+
+echo.
+echo ============================================================
+echo  Removing VPN-related firewall rules...
+echo ============================================================
+
+netsh advfirewall firewall delete rule name="Block VPN - OpenVPN UDP" >nul 2>&1
+netsh advfirewall firewall delete rule name="Block VPN - OpenVPN TCP" >nul 2>&1
+netsh advfirewall firewall delete rule name="Block VPN - WireGuard" >nul 2>&1
+netsh advfirewall firewall delete rule name="Block VPN - IKE" >nul 2>&1
+netsh advfirewall firewall delete rule name="Block VPN - IPSec NAT-T" >nul 2>&1
+netsh advfirewall firewall delete rule name="Block VPN - L2TP" >nul 2>&1
+netsh advfirewall firewall delete rule name="Block VPN - PPTP" >nul 2>&1
+netsh advfirewall firewall delete rule name="Block VPN - GRE" >nul 2>&1
+
+powershell -NoProfile -Command ^
+  "Remove-NetFirewallRule -DisplayName 'Block Known VPN Providers' -ErrorAction SilentlyContinue"
+
+echo Firewall rules removed.
+
+echo.
+echo ============================================================
+echo  Cleaning up leftover files...
+echo ============================================================
+
+if exist "%HASHFILE%" del "%HASHFILE%" >nul 2>&1
+if exist "%LOCKDIR%" rmdir "%LOCKDIR%" >nul 2>&1
+
+echo.
+echo ============================================================
+echo  Flushing DNS cache...
+echo ============================================================
+ipconfig /flushdns >nul
+
+echo.
+echo ============================================================
+echo  DONE. Internet access, DNS, and firewall rules should be
+echo  back to normal. If his Windows account was changed to
+echo  Standard User, go to:
+echo    Settings - Accounts - Family and other users
+echo  and change it back to Administrator if that's what he had
+echo  before.
+echo ============================================================
+pause
